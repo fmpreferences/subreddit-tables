@@ -8,28 +8,77 @@ import sys
 
 
 def main():
+    # declaration for important global variables
     # namespace = reddits_parser()
-    categories = 'Cats General',  # [sub.strip() for sub in namespace.reddits.split(',')]
-    multireddit_name = 'idk'  # namespace.multi
-    ranks = 1, 50  # namespace.range
-    count = 50  # namespace.count
+    categories = 'General Cats', 'Cat Media', 'Cats Being Cats', 'Cats in Shapes'  # [sub.strip() for sub in namespace.reddits.split(',')]
+    multireddit_name = 'abc'  # namespace.multi
+    ranks = 1, 25  # namespace.range
+    count = 25  # namespace.count
     error = 'content.w'  # namespace.error
 
     header_tags = 'h1', 'h2', 'h3', 'h4', 'h5'
     user_agent = 'script:substrial:v1.0 (by u/Animal_Subs_Trial)'
     reddit = praw.Reddit(user_agent, user_agent=user_agent)
 
-    animal = reddit.subreddit('animalreddits')
-    content = animal.wiki['faq'].content_html
+    # declaration for global methods
+
+    def generate_subreddits(sub_pool):
+        '''generates subreddits based on argparser'''
+        banned = []
+
+        def handle_errors(sub, errormsg):
+            if error is not None:
+                with open(error, 'w') as error_file:
+                    error_file.write(errormsg + '\n')
+            print(errormsg, file=sys.stderr)
+            banned.append(sub)
+
+        def subscribers_least_to_greatest(sub):
+            try:
+                return reddit.subreddit(sub).subscribers
+            except prawcore.Forbidden:
+                errormsg = f'Access to r/{sub} is private'
+                handle_errors(sub, errormsg)
+                return 0
+            except prawcore.Redirect:
+                errormsg = f'r/{sub} does not exist; possibly banned'
+                handle_errors(sub, errormsg)
+                return 0
+            except prawcore.NotFound:
+                errormsg = f'r/{sub} has been banned'
+                handle_errors(sub, errormsg)
+                return 0
+            except prawcore.ResponseException as e:
+                errormsg = ' '.join(e, type(e), sub)
+                handle_errors(sub, errormsg)
+                return 0
+
+        subreddits = sorted(sub_pool,
+                            key=subscribers_least_to_greatest,
+                            reverse=True)
+        if ranks is not None:
+            top, bottom = ranks
+            top = max(0, top)
+            bottom = min(100, bottom)
+            subset = random.sample(subreddits[top - 1:bottom], count)
+        else:
+            subset = random.sample(subreddits, count)
+        return list(set(subset) - set(banned))
+
+    animal = reddit.subreddit('catsubs')
+    content = animal.wiki['index'].content_html
     parser = bs(content, 'html.parser')
 
     headers = [
         header for tag in header_tags for header in parser.find_all(tag)
     ]
-    tables = list({
-        header.find_next('table')
-        for header in headers if header.string in categories
-    })
+    if categories:
+        tables = list({
+            header.find_next('table')
+            for header in headers if header.string in categories
+        })
+    else:
+        tables = list({header.find_next('table') for header in headers})
     subreddits = list({
         match
         for table in tables
@@ -57,54 +106,6 @@ def main():
             reddit.multireddit.create(
                 multireddit_name,
                 generate_subreddits(subreddits, reddit, count, error, ranks))
-
-
-def generate_subreddits(sub_pool, reddit, count: int, error=None, ranks=None):
-    banned = []
-
-    def subscribers_least_to_greatest(sub):
-        try:
-            return reddit.subreddit(sub).subscribers
-        except prawcore.Forbidden:
-            errormsg = f'Access to r/{sub} is private'
-            if error is not None:
-                with open(error, 'a') as error_file:
-                    error_file.write(errormsg + '\n')
-            print(errormsg, file=sys.stderr)
-            banned.append(sub)
-            return 0
-        except prawcore.Redirect:
-            errormsg = f'r/{sub} does not exist; possibly banned'
-            if error is not None:
-                with open(error, 'a') as error_file:
-                    error_file.write(errormsg + '\n')
-            print(errormsg, file=sys.stderr)
-            banned.append(sub)
-            return 0
-        except prawcore.NotFound:
-            errormsg = f'r/{sub} has been banned'
-            if error is not None:
-                with open(error, 'a') as error_file:
-                    error_file.write(errormsg + '\n')
-            print(errormsg, file=sys.stderr)
-            banned.append(sub)
-            return 0
-        except prawcore.ResponseException as e:
-            print(e, type(e), sub, file=sys.stderr)
-            return 0
-
-    subreddits = sorted(sub_pool,
-                        key=subscribers_least_to_greatest,
-                        reverse=True)
-    subset = []
-    if ranks is not None:
-        top, bottom = ranks
-        top = max(0, top)
-        bottom = min(100, bottom)
-        subset = random.sample(subreddits[top - 1:bottom], count)
-    else:
-        subset = random.sample(subreddits, count)
-    return list(set(subset) - set(banned))
 
 
 # def reddits_parser():
