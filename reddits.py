@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup as bs
 
 
 def main():
-    header_tags = ('h1', 'h2', 'h3')
+    header_tags = 'h1', 'h2', 'h3'
     user_agent = 'script:substrial:v1.0 (by u/)'
     reddit = praw.Reddit(user_agent, user_agent=user_agent)
     animal = reddit.subreddit('animalreddits')
@@ -13,7 +13,11 @@ def main():
     headers = [
         header for tag in header_tags for header in parser.find_all(tag)
     ]
-    tables = list({header.find_next('table') for header in headers})
+    categories = 'Identification', 'Mammals'
+    tables = list({
+        header.find_next('table')
+        for header in headers if header.string in categories
+    })
     subreddits = list({
         match
         for table in tables
