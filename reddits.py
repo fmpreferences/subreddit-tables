@@ -3,6 +3,7 @@ import prawcore
 from argparse import ArgumentParser
 import re
 from bs4 import BeautifulSoup as bs
+import random
 
 
 def main():
@@ -14,7 +15,7 @@ def main():
 
     # namespace = argparse.parse_args()
     # argparse.add_argument('-s')
-    header_tags = 'h1', 'h2', 'h3'
+    header_tags = 'h1', 'h2', 'h3', 'h4', 'h5'
     user_agent = 'script:substrial:v1.0 (by u/)'
     reddit = praw.Reddit(user_agent, user_agent=user_agent)
     animal = reddit.subreddit('animalreddits')
@@ -23,7 +24,7 @@ def main():
     headers = [
         header for tag in header_tags for header in parser.find_all(tag)
     ]
-    categories = 'Identification', 'Mammals'  # [sub.strip() for sub in namespace.reddits.split(',')]
+    categories = 'Cats General',  # [sub.strip() for sub in namespace.reddits.split(',')]
     tables = list({
         header.find_next('table')
         for header in headers if header.string in categories
@@ -31,9 +32,10 @@ def main():
     subreddits = list({
         match
         for table in tables
-        for match in re.findall(r'r\/[A-Za-z0-9-_]+', str(table))
+        for match in re.findall(r'r\/([A-Za-z0-9-_]+)', str(table))
     })
     print(subreddits)
+    print(generate_subreddits(subreddits, reddit, 10, (1, 10)))
     multireddit_name = ''  # namespace.multi
     try:
         print(
@@ -45,8 +47,26 @@ def main():
             reddit.multireddit.create(multireddit_name, [])
 
 
-def generate_subreddits():
-    pass
+def generate_subreddits(sub_pool, reddit, count: int, strata=None):
+    def subscribers_least_to_greatest(sub):
+        try:
+            return reddit.subreddit(sub).subscribers
+        except prawcore.Forbidden:
+            print(f'Forbidden access to r/{sub}; banned by reddit?')
+            return 0
+        except prawcore.ResponseException:
+            return 0
+
+    subreddits = sorted(sub_pool,
+                        key=subscribers_least_to_greatest,
+                        reverse=True)
+    subset = []
+    if strata is not None:
+        top, bottom = strata
+        subset = random.sample(subreddits[top - 1:bottom], count)
+    else:
+        subset = random.sample(subreddits, count)
+    return subset
 
 
 if __name__ == '__main__':
