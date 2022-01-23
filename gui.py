@@ -8,7 +8,33 @@ class App(Gtk.Window):
     def __init__(self):
         super().__init__(title='Whatever')
         self.left_box = Gtk.Box(spacing=10,
+                                orientation=Gtk.Orientation.VERTICAL)
+        self.right_box = Gtk.Box(spacing=10,
                                  orientation=Gtk.Orientation.VERTICAL)
+
+        self.source_text = Gtk.Label.new('Source Subreddit')
+        self.source_name = Gtk.Entry()
+
+        self.source_box = Gtk.Box(spacing=10,
+                                  orientation=Gtk.Orientation.VERTICAL)
+
+        self.source_box.pack_start(self.source_text, False, False, 0)
+        self.source_box.pack_start(self.source_name, False, False, 0)
+
+        self.wikipage_text = Gtk.Label.new('Wiki Page')
+        self.wikipage_name = Gtk.Entry()
+
+        self.wikipage_box = Gtk.Box(spacing=10,
+                                    orientation=Gtk.Orientation.VERTICAL)
+
+        self.wikipage_box.pack_start(self.wikipage_text, False, False, 0)
+        self.wikipage_box.pack_start(self.wikipage_name, False, False, 0)
+
+        self.subwiki_box = Gtk.Box(spacing=10)
+
+        self.subwiki_box.pack_start(self.source_box, False, False, 0)
+        self.subwiki_box.pack_start(self.wikipage_box, False, False, 0)
+
         self.multi_text = Gtk.Label.new('Multi Name')
         self.multi_name = Gtk.Entry()
 
@@ -39,16 +65,21 @@ class App(Gtk.Window):
         self.calendar_text.connect('toggled', self.on_checked_set_visible,
                                    self.calendar)
 
+        self.left_box.pack_start(self.subwiki_box, False, False, 0)
         self.left_box.pack_start(self.multi_text, False, False, 0)
         self.left_box.pack_start(self.multi_name, False, False, 0)
         self.left_box.pack_start(self.rank_text, False, False, 0)
         self.left_box.pack_start(self.rank_box, False, False, 0)
         self.left_box.pack_start(self.count_text, False, False, 0)
         self.left_box.pack_start(self.count_field, False, False, 0)
-        self.left_box.pack_start(self.calendar_text, False, False, 0)
-        self.left_box.pack_start(self.calendar, False, False, 0)
 
-        self.add(self.left_box)
+        self.right_box.pack_start(self.calendar_text, False, False, 0)
+        self.right_box.pack_start(self.calendar, False, False, 0)
+
+        self.all_box = Gtk.Box(spacing=10)
+        self.all_box.pack_start(self.left_box, False, False, 0)
+        self.all_box.pack_start(self.right_box, False, False, 0)
+        self.add(self.all_box)
 
     def on_checked_set_editable(self, source, target):
         target.set_editable(not target.get_editable())
