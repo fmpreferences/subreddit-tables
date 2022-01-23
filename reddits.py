@@ -11,8 +11,9 @@ from datetime import datetime, timezone
 def main():
     # declaration for important global variables
     namespace = reddits_parser()
-    categories = [sub.strip() for sub in namespace.reddits.split(',')]
+    categories = [sub.strip() for sub in namespace.headings.split(',')]
     multireddit_name = namespace.multi
+    subreddit_name, wiki_page = [part.strip() for part in namespace.source.split(',')][:2]
     ranks = [int(num.strip()) for num in namespace.range.split(',')][:2]
     count = namespace.count
     error = namespace.error
@@ -78,15 +79,15 @@ def main():
                 top = max(1, top)
                 bottom = min(100, bottom)
             elif top < 0 and bottom < 0:
-                top = min(-100, min)
+                top = min(-100, top)
                 bottom = max(-1, bottom)
             subset = random.sample(subreddits[top - 1:bottom], count)
         else:
             subset = random.sample(subreddits, count)
         return list(set(subset) - set(excluded))
 
-    animal = reddit.subreddit('catsubs')
-    content = animal.wiki['index'].content_html
+    subreddit = reddit.subreddit(subreddit_name)
+    content = subreddit.wiki[wiki_page].content_html
     parser = bs(content, 'html.parser')
     with open('content.html', 'w') as content_html:
         content_html.write(content)
@@ -135,8 +136,11 @@ def main():
 
 def reddits_parser():
     argparse = ArgumentParser(description='Lorem Ipsum')
+    argparse.add_argument('source',
+                          type=str,
+                          help='the wikipage to use: subredditname/page')
     argparse.add_argument('multi', type=str, help='the multi on your user')
-    argparse.add_argument('reddits',
+    argparse.add_argument('headings',
                           type=str,
                           help='headings to analyze, separated by spaces')
     argparse.add_argument(
