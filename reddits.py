@@ -49,10 +49,16 @@ def main():
             subreddit = reddit.subreddit(sub)
             try:
                 if active_time is not None:
-                    last_post = [m for m in subreddit.new(limit=1)][0]
+                    new_posts = [m for m in subreddit.new(limit=1)]
+                    if len(new_posts) < 1:
+                        print(f'{sub} excluded for inactivity')
+                        excluded.append(sub)
+                        return 0
+                    last_post = new_posts[0]
                     if last_post.created_utc < active_time:
                         print(f'{sub} excluded for inactivity')
                         excluded.append(sub)
+                        return 0
 
                 return subreddit.subscribers
             except prawcore.Forbidden:
