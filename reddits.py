@@ -5,22 +5,22 @@ import re
 from bs4 import BeautifulSoup as bs
 import random
 import sys
-import datetime
+from datetime import datetime, timezone
 
 
 def main():
     # declaration for important global variables
-    # namespace = reddits_parser()
-    categories = 'Cats with Things'  # 'General Cats', 'Cat Media', 'Cats Being Cats', 'Cats in Shapes'  # [sub.strip() for sub in namespace.reddits.split(',')]
-    multireddit_name = 'abc'  # namespace.multi
-    ranks = 1, 10  # namespace.range
-    count = 10  # namespace.count
-    error = 'content.w'  # namespace.error
-    active_time = datetime.datetime.strptime(
-        '21 01 2022 00 00 00',
-        '%d %m %Y %H %M %S').replace(tzinfo=datetime.timezone.utc).timestamp()
+    namespace = reddits_parser()
+    categories = [sub.strip() for sub in namespace.reddits.split(',')]
+    multireddit_name = namespace.multi
+    ranks = [int(num.strip()) for num in namespace.range.split(',')][:2]
+    count = namespace.count
+    error = namespace.error
+    active_time = datetime.strptime(
+        namespace.active,
+        '%d %m %Y %H %M %S').replace(tzinfo=timezone.utc).timestamp()
 
-    header_tags = 'h1', 'h2', 'h3', 'h4', 'h5'
+    header_tags = 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
     user_agent = 'script:substrial:v1.0 (by u/Animal_Subs_Trial)'
     reddit = praw.Reddit(user_agent, user_agent=user_agent)
 
@@ -69,7 +69,7 @@ def main():
                             reverse=True)
         if ranks is not None:
             top, bottom = ranks
-            top = max(0, top)
+            top = max(1, top)
             bottom = min(100, bottom)
             subset = random.sample(subreddits[top - 1:bottom], count)
         else:
