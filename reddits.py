@@ -5,16 +5,20 @@ import re
 from bs4 import BeautifulSoup as bs
 import random
 import sys
+import datetime
 
 
 def main():
     # declaration for important global variables
     # namespace = reddits_parser()
-    categories = 'General Cats', 'Cat Media', 'Cats Being Cats', 'Cats in Shapes'  # [sub.strip() for sub in namespace.reddits.split(',')]
+    categories = 'Cats with Things'  # 'General Cats', 'Cat Media', 'Cats Being Cats', 'Cats in Shapes'  # [sub.strip() for sub in namespace.reddits.split(',')]
     multireddit_name = 'abc'  # namespace.multi
-    ranks = 1, 25  # namespace.range
-    count = 25  # namespace.count
+    ranks = 1, 10  # namespace.range
+    count = 10  # namespace.count
     error = 'content.w'  # namespace.error
+    active_time = datetime.datetime.strptime(
+        '21 01 2022 00 00 00',
+        '%d %m %Y %H %M %S').replace(tzinfo=datetime.timezone.utc).timestamp()
 
     header_tags = 'h1', 'h2', 'h3', 'h4', 'h5'
     user_agent = 'script:substrial:v1.0 (by u/Animal_Subs_Trial)'
@@ -24,18 +28,25 @@ def main():
 
     def generate_subreddits(sub_pool):
         '''generates subreddits based on argparser'''
-        banned = []
+        excluded = []
 
         def handle_errors(sub, errormsg):
             if error is not None:
                 with open(error, 'w') as error_file:
                     error_file.write(errormsg + '\n')
             print(errormsg, file=sys.stderr)
-            banned.append(sub)
+            excluded.append(sub)
 
         def subscribers_least_to_greatest(sub):
+            subreddit = reddit.subreddit(sub)
             try:
-                return reddit.subreddit(sub).subscribers
+                if active_time is not None:
+                    last_post = [m for m in subreddit.new(limit=1)][0]
+                    if last_post.created_utc < active_time:
+                        print(f'{sub} excluded for inactivity')
+                        excluded.append(sub)
+
+                return subreddit.subscribers
             except prawcore.Forbidden:
                 errormsg = f'Access to r/{sub} is private'
                 handle_errors(sub, errormsg)
@@ -63,12 +74,13 @@ def main():
             subset = random.sample(subreddits[top - 1:bottom], count)
         else:
             subset = random.sample(subreddits, count)
-        return list(set(subset) - set(banned))
+        return list(set(subset) - set(excluded))
 
     animal = reddit.subreddit('catsubs')
     content = animal.wiki['index'].content_html
     parser = bs(content, 'html.parser')
-
+    with open('content.html', 'w') as content_html:
+        content_html.write(content)
     headers = [
         header for tag in header_tags for header in parser.find_all(tag)
     ]
@@ -88,9 +100,14 @@ def main():
     try:
         target_multi = reddit.multireddit(reddit.user.me().name,
                                           multireddit_name)
-        sub_names = {sub.display_name for sub in target_multi.subreddits}
-        generated_subs = set(
-            generate_subreddits(subreddits, reddit, count, error, ranks))
+        sub_names = {
+            sub.display_name.lower()
+            for sub in target_multi.subreddits
+        }
+        generated_subs = {
+            sub.lower()
+            for sub in generate_subreddits(subreddits)
+        }
         intersection = sub_names & generated_subs
         subs_to_remove = sub_names - intersection
         subs_to_add = generated_subs - intersection
@@ -102,32 +119,42 @@ def main():
 
     except prawcore.NotFound:
         create_selection = input('create y/n?')
-        if create_selection.lower() == 'y':
-            reddit.multireddit.create(
-                multireddit_name,
-                generate_subreddits(subreddits, reddit, count, error, ranks))
+        if create_selection.lower().strip() == 'y':
+            reddit.multireddit.create(multireddit_name,
+                                      generate_subreddits(subreddits))
 
 
-# def reddits_parser():
-#     argparse = ArgumentParser(description='Lorem Ipsum')
-#     argparse.add_argument('multi', type=str, help='the multi on your user')
-#     argparse.add_argument('reddits',
-#                           type=str,
-#                           help='reddits to analyze, separated by spaces')
-#     argparse.add_argument('-r',
-#                           '--range',
-#                           type=str,
-#                           help='ranks of the subreddits to analyze')
-#     argparse.add_argument('-c',
-#                           '--count',
-#                           type=int,
-#                           help='number of subs to choose')
-#     argparse.add_argument('-e',
-#                           '--error',
-#                           type=str,
-#                           help='write errors to this file')
+def reddits_parser():
+    argparse = ArgumentParser(description='Lorem Ipsum')
+    argparse.add_argument('multi', type=str, help='the multi on your user')
+    argparse.add_argument('reddits',
+                          type=str,
+                          help='reddits to analyze, separated by spaces')
+    argparse.add_argument('-r',
+                          '--range',
+                          type=str,
+                          help='ranks of the subreddits to analyze')
+    argparse.add_argument('-c',
+                          '--count',
+                          type=int,
+                          help='number of subs to choose')
+    argparse.add_argument('-e',
+                          '--error',
+                          type=str,
+                          help='write errors to this file')
+    argparse.add_argument('-a',
+                          '--active',
+                          type=str,
+                          help='''filters subs based on last activity.
+                          use %d %m %Y %H %M %S''')
+    #     argparse.add_argument('-s',
+    #                           '--self',
+    #                           type=int,
+    #                           help='''filters based on if last post is self or not.
+    # not work without -a. 1 for self, 0 for not self, -1 for ignore this''')
 
-#     return argparse.parse_args()
+    return argparse.parse_args()
+
 
 if __name__ == '__main__':
     main()
