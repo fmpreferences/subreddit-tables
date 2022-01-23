@@ -3,6 +3,8 @@ import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 import subprocess
+from datetime import datetime
+from tempfile import TemporaryFile
 
 
 class App(Gtk.Window):
@@ -92,7 +94,6 @@ class App(Gtk.Window):
         self.all_box = Gtk.Box(spacing=10)
         self.all_box.pack_start(self.left_box, False, False, 0)
         self.all_box.pack_start(self.right_box, False, False, 0)
-
         self.add(self.all_box)
 
         self.required_entries = [
@@ -114,7 +115,7 @@ class App(Gtk.Window):
 
         args = [
             'python3', 'reddits.py',
-            self.source_field.get_text(),
+            f'{self.source_field.get_text()},{self.wikipage_field.get_text()}',
             self.headers_field.get_text(),
             self.multi_field.get_text()
         ]
@@ -129,7 +130,7 @@ class App(Gtk.Window):
                 self.error_text.set_text('invalid rank config')
                 return
             else:
-                args += ['-r', str(highest) + ',' + str(lowest)]
+                args += ['-r', f' {highest},{lowest}']
 
         count = int(self.count_field.get_text())
 
@@ -138,13 +139,21 @@ class App(Gtk.Window):
                 self.error_text.set_text('count is too much!')
                 return
             else:
-                args += ['-c', count]
+                args += ['-c', str(count)]
 
         if self.calendar.get_visible():
-            print(type(self.calendar.get_date()), self.calendar.get_date())
-            args.append(self.calendar.get_date())
-
-        # subprocess.run()
+            this_date = self.calendar.get_date()
+            args += [
+                '-a',
+                str(
+                    datetime(this_date.year, this_date.month + 1,
+                             this_date.day).timestamp())
+            ]
+        print('command used:\n' + ' '.join(args))
+        with TemporaryFile('a+') as yes:
+            yes.write('y\n')
+            yes.seek(0)
+            subprocess.run(args, stdin=yes)
 
 
 class OneHundredSpinButton(Gtk.SpinButton):

@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 def main():
     # declaration for important global variables
     namespace = reddits_parser()
-    categories = [sub.strip() for sub in namespace.headings.split(',')]
+    headings = [sub.strip().lower() for sub in namespace.headings.split(',')]
     multireddit_name = namespace.multi
     subreddit_name, wiki_page = [
         part.strip() for part in namespace.source.split(',')
@@ -81,9 +81,13 @@ def main():
                 top = max(1, top)
                 bottom = min(100, bottom)
             elif top < 0 and bottom < 0:
-                top = min(-100, top)
-                bottom = max(-1, bottom)
-            subset = random.sample(subreddits[top - 1:bottom], count)
+                top = max(-100, top) + 101
+                bottom = min(-1, bottom) + 101
+            if count is not None and count != 0:
+                new_count = min(count, bottom - top + 1)
+            else:
+                new_count = bottom - top + 1
+            subset = random.sample(subreddits[top - 1:bottom], new_count)
         else:
             subset = random.sample(subreddits, count)
         return list(set(subset) - set(excluded))
@@ -96,10 +100,10 @@ def main():
     headers = [
         header for tag in header_tags for header in parser.find_all(tag)
     ]
-    if categories:
+    if headings:
         tables = list({
             header.find_next('table')
-            for header in headers if header.string in categories
+            for header in headers if header.string.lower() in headings
         })
     else:
         tables = list({header.find_next('table') for header in headers})
@@ -108,7 +112,6 @@ def main():
         for table in tables
         for match in re.findall(r'r\/([A-Za-z0-9-_]+)', str(table))
     })
-    print(subreddits)
     try:
         target_multi = reddit.multireddit(reddit.user.me().name,
                                           multireddit_name)
@@ -123,7 +126,10 @@ def main():
         intersection = sub_names & generated_subs
         subs_to_remove = sub_names - intersection
         subs_to_add = generated_subs - intersection
-        print(subs_to_remove, subs_to_add)
+        print(f'removing {len(subs_to_remove)} subs:\n' +
+              '\n'.join(subs_to_remove) + '\n')
+        print(f'adding {len(subs_to_add)} subs:\n' + '\n'.join(subs_to_add) +
+              '\n')
         for sub in subs_to_remove:
             target_multi.remove(reddit.subreddit(sub))
         for sub in subs_to_add:
@@ -132,8 +138,10 @@ def main():
     except prawcore.NotFound:
         create_selection = input('create y/n?')
         if create_selection.lower().strip() == 'y':
-            reddit.multireddit.create(multireddit_name,
-                                      generate_subreddits(subreddits))
+            subs = generate_subreddits(subreddits)
+            print(f'adding {len(subs)} subs:\n' + '\n'.join(subs) + '\n')
+
+            reddit.multireddit.create(multireddit_name, subs)
 
 
 def reddits_parser():
