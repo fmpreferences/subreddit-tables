@@ -2,6 +2,7 @@ import gi
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+import subprocess
 
 
 class App(Gtk.Window):
@@ -13,33 +14,33 @@ class App(Gtk.Window):
                                  orientation=Gtk.Orientation.VERTICAL)
 
         self.source_text = Gtk.Label.new('Source Subreddit')
-        self.source_name = Gtk.Entry()
+        self.source_field = Gtk.Entry()
 
         self.source_box = Gtk.Box(spacing=10,
                                   orientation=Gtk.Orientation.VERTICAL)
 
         self.source_box.pack_start(self.source_text, False, False, 0)
-        self.source_box.pack_start(self.source_name, False, False, 0)
+        self.source_box.pack_start(self.source_field, False, False, 0)
 
         self.wikipage_text = Gtk.Label.new('Wiki Page')
-        self.wikipage_name = Gtk.Entry()
+        self.wikipage_field = Gtk.Entry()
 
         self.wikipage_box = Gtk.Box(spacing=10,
                                     orientation=Gtk.Orientation.VERTICAL)
 
         self.wikipage_box.pack_start(self.wikipage_text, False, False, 0)
-        self.wikipage_box.pack_start(self.wikipage_name, False, False, 0)
+        self.wikipage_box.pack_start(self.wikipage_field, False, False, 0)
 
         self.subwiki_box = Gtk.Box(spacing=10)
 
         self.subwiki_box.pack_start(self.source_box, False, False, 0)
         self.subwiki_box.pack_start(self.wikipage_box, False, False, 0)
 
-        self.headers_text = Gtk.Label.new('Headers to match')
-        self.headers_name = Gtk.Entry()
+        self.headers_text = Gtk.Label.new('Headers to match (comma separated)')
+        self.headers_field = Gtk.Entry()
 
         self.multi_text = Gtk.Label.new('Multi Name')
-        self.multi_name = Gtk.Entry()
+        self.multi_field = Gtk.Entry()
 
         self.rank_text = Gtk.CheckButton.new_with_mnemonic(
             'Subscriber _Rank Range')
@@ -75,9 +76,9 @@ class App(Gtk.Window):
 
         self.left_box.pack_start(self.subwiki_box, False, False, 0)
         self.left_box.pack_start(self.headers_text, False, False, 0)
-        self.left_box.pack_start(self.headers_name, False, False, 0)
+        self.left_box.pack_start(self.headers_field, False, False, 0)
         self.left_box.pack_start(self.multi_text, False, False, 0)
-        self.left_box.pack_start(self.multi_name, False, False, 0)
+        self.left_box.pack_start(self.multi_field, False, False, 0)
         self.left_box.pack_start(self.rank_text, False, False, 0)
         self.left_box.pack_start(self.rank_box, False, False, 0)
         self.left_box.pack_start(self.count_text, False, False, 0)
@@ -95,8 +96,8 @@ class App(Gtk.Window):
         self.add(self.all_box)
 
         self.required_entries = [
-            self.source_name, self.wikipage_name, self.headers_name,
-            self.multi_name
+            self.source_field, self.wikipage_field, self.headers_field,
+            self.multi_field
         ]
 
     def on_checked_set_editable(self, source, target):
@@ -108,10 +109,43 @@ class App(Gtk.Window):
     def pre_send_checks(self, source):
         for entry in self.required_entries:
             if not entry.get_text():
-                self.error_text.set_text('One or more fields is blank!')
+                self.error_text.set_text('one or more fields is blank!')
                 return
+
+        args = [
+            'python3', 'reddits.py',
+            self.source_field.get_text(),
+            self.headers_field.get_text(),
+            self.multi_field.get_text()
+        ]
+
         highest = int(self.rank_highest.get_text())
         lowest = int(self.rank_lowest.get_text())
+
+        if self.rank_text.get_active():
+            if highest > lowest or highest == 0 or lowest == 0 or (
+                    lowest < 0 and highest > 0) or (lowest > 0
+                                                    and highest < 0):
+                self.error_text.set_text('invalid rank config')
+                return
+            else:
+                args += ['-r', str(highest) + ',' + str(lowest)]
+
+        count = int(self.count_field.get_text())
+
+        if self.count_text.get_active():
+            if count > (lowest - highest + 1):
+                self.error_text.set_text('count is too much!')
+                return
+            else:
+                args += ['-c', count]
+
+        if self.calendar.get_visible():
+            print(type(self.calendar.get_date()), self.calendar.get_date())
+            args.append(self.calendar.get_date())
+
+        # subprocess.run()
+
 
 class OneHundredSpinButton(Gtk.SpinButton):
     def __init__(self, negative=False):
