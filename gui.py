@@ -9,7 +9,7 @@ from tempfile import TemporaryFile
 
 class App(Gtk.Window):
     def __init__(self):
-        super().__init__(title='Whatever')
+        super().__init__(title='Subreddit Tables')
         self.left_box = Gtk.Box(spacing=10,
                                 orientation=Gtk.Orientation.VERTICAL)
         self.right_box = Gtk.Box(spacing=10,
