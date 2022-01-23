@@ -35,6 +35,9 @@ class App(Gtk.Window):
         self.subwiki_box.pack_start(self.source_box, False, False, 0)
         self.subwiki_box.pack_start(self.wikipage_box, False, False, 0)
 
+        self.headers_text = Gtk.Label.new('Headers to match')
+        self.headers_name = Gtk.Entry()
+
         self.multi_text = Gtk.Label.new('Multi Name')
         self.multi_name = Gtk.Entry()
 
@@ -65,7 +68,14 @@ class App(Gtk.Window):
         self.calendar_text.connect('toggled', self.on_checked_set_visible,
                                    self.calendar)
 
+        self.submit_btn = Gtk.Button.new_with_label('Submit')
+        self.submit_btn.connect('clicked', self.pre_send_checks)
+
+        self.error_text = Gtk.Label.new('')
+
         self.left_box.pack_start(self.subwiki_box, False, False, 0)
+        self.left_box.pack_start(self.headers_text, False, False, 0)
+        self.left_box.pack_start(self.headers_name, False, False, 0)
         self.left_box.pack_start(self.multi_text, False, False, 0)
         self.left_box.pack_start(self.multi_name, False, False, 0)
         self.left_box.pack_start(self.rank_text, False, False, 0)
@@ -75,11 +85,19 @@ class App(Gtk.Window):
 
         self.right_box.pack_start(self.calendar_text, False, False, 0)
         self.right_box.pack_start(self.calendar, False, False, 0)
+        self.right_box.pack_start(self.submit_btn, False, False, 0)
+        self.right_box.pack_start(self.error_text, False, False, 0)
 
         self.all_box = Gtk.Box(spacing=10)
         self.all_box.pack_start(self.left_box, False, False, 0)
         self.all_box.pack_start(self.right_box, False, False, 0)
+
         self.add(self.all_box)
+
+        self.required_entries = [
+            self.source_name, self.wikipage_name, self.headers_name,
+            self.multi_name
+        ]
 
     def on_checked_set_editable(self, source, target):
         target.set_editable(not target.get_editable())
@@ -87,6 +105,13 @@ class App(Gtk.Window):
     def on_checked_set_visible(self, source, target):
         target.set_visible(not target.get_visible())
 
+    def pre_send_checks(self, source):
+        for entry in self.required_entries:
+            if not entry.get_text():
+                self.error_text.set_text('One or more fields is blank!')
+                return
+        highest = int(self.rank_highest.get_text())
+        lowest = int(self.rank_lowest.get_text())
 
 class OneHundredSpinButton(Gtk.SpinButton):
     def __init__(self, negative=False):
