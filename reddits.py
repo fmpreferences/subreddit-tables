@@ -19,14 +19,15 @@ def main():
     ranks = [int(num.strip()) for num in namespace.range.split(',')][:2]
     count = namespace.count
     error = namespace.error
-    try:
-        active_time = float(namespace.active)
-    except ValueError:
-        time, date_format = [
-            part.strip() for part in namespace.active.split(',')
-        ][:2]
-        active_time = datetime.strptime(
-            time, date_format).replace(tzinfo=timezone.utc).timestamp()
+    if namespace.active is not None:
+        try:
+            active_time = float(namespace.active)
+        except ValueError:
+            time, date_format = [
+                part.strip() for part in namespace.active.split(',')
+            ][:2]
+            active_time = datetime.strptime(
+                time, date_format).replace(tzinfo=timezone.utc).timestamp()
 
     header_tags = 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
     user_agent = 'script:substrial:v1.0 (by u/Animal_Subs_Trial)'
