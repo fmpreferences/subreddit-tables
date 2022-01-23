@@ -16,9 +16,14 @@ def main():
     ranks = [int(num.strip()) for num in namespace.range.split(',')][:2]
     count = namespace.count
     error = namespace.error
-    active_time = datetime.strptime(
-        namespace.active,
-        '%d %m %Y %H %M %S').replace(tzinfo=timezone.utc).timestamp()
+    try:
+        active_time = float(namespace.active)
+    except ValueError:
+        time, date_format = [
+            part.strip() for part in namespace.active.split(',')
+        ][:2]
+        active_time = datetime.strptime(
+            time, date_format).replace(tzinfo=timezone.utc).timestamp()
 
     header_tags = 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'
     user_agent = 'script:substrial:v1.0 (by u/Animal_Subs_Trial)'
@@ -69,8 +74,12 @@ def main():
                             reverse=True)
         if ranks is not None:
             top, bottom = ranks
-            top = max(1, top)
-            bottom = min(100, bottom)
+            if top > 0 and bottom > 0:
+                top = max(1, top)
+                bottom = min(100, bottom)
+            elif top < 0 and bottom < 0:
+                top = min(-100, min)
+                bottom = max(-1, bottom)
             subset = random.sample(subreddits[top - 1:bottom], count)
         else:
             subset = random.sample(subreddits, count)
@@ -129,11 +138,13 @@ def reddits_parser():
     argparse.add_argument('multi', type=str, help='the multi on your user')
     argparse.add_argument('reddits',
                           type=str,
-                          help='reddits to analyze, separated by spaces')
-    argparse.add_argument('-r',
-                          '--range',
-                          type=str,
-                          help='ranks of the subreddits to analyze')
+                          help='headings to analyze, separated by spaces')
+    argparse.add_argument(
+        '-r',
+        '--range',
+        type=str,
+        help='ranks of the subreddits to analyze. use negative to sort backward'
+    )
     argparse.add_argument('-c',
                           '--count',
                           type=int,
@@ -146,7 +157,7 @@ def reddits_parser():
                           '--active',
                           type=str,
                           help='''filters subs based on last activity.
-                          use %d %m %Y %H %M %S''')
+                          either a unix time or send your date format''')
     #     argparse.add_argument('-s',
     #                           '--self',
     #                           type=int,
